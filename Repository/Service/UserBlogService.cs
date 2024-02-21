@@ -5,13 +5,14 @@ namespace BlogAppAPI.Repository.Service
 {
     public class UserBlogService : IUserBlogRepository
     {
-        public UserBlogService()
+        private readonly IConfiguration _configuration;
+        public UserBlogService(IConfiguration configuration)
         {
-
+            _configuration = configuration;
         }
 
         public List<Model.UserBlogs> GetAllBlogs()
-        {
+        {            
             using (var context = new AppDbContext())
             {
                 // Query data
@@ -100,16 +101,25 @@ namespace BlogAppAPI.Repository.Service
             }
         }
 
-        public bool DeleteBlog(int ID)
+        public bool DeleteBlog(int ID,string emailID)
         {
             using (var context = new AppDbContext())
             {
-                var obj = context.UserBlogs.Where(x => x.ID == ID).FirstOrDefault();
+                int authorID=context.UserBlogs.Where(x=>x.ID==ID).Select(x=>x.AuthorID).FirstOrDefault()??0;
+                if (authorID == context.Users.Where(x => x.EmailID == emailID).Select(x => x.ID).FirstOrDefault())
+                {
 
-                context.UserBlogs.Remove(obj);
-                context.SaveChanges();
+                    var obj = context.UserBlogs.Where(x => x.ID == ID).FirstOrDefault();
 
-                return true;
+                    context.UserBlogs.Remove(obj);
+                    context.SaveChanges();
+
+                    return true;
+                }
+                else
+                {
+                    throw new Exception("User can only delete their own blogs");
+                }
 
             }
         }
@@ -150,26 +160,32 @@ namespace BlogAppAPI.Repository.Service
             {
                 using (var context = new AppDbContext())
                 {
-                    var obj = new Users
+                    if (user.EmailID != context.Users.Select(x => x.EmailID == user.EmailID).ToString())
                     {
-                        FirstName = user.FirstName,
-                        LastName= user.LastName,
-                        EmailID = user.EmailID,
-                        IsActive= true,
-                        ContactNo = user.ContactNo,
-                        Gender = user.Gender,
-                        Password = user.Password,
-                        CreatedDate = DateTime.Now,
-                        CreatedBy = 1,
-                    };
+                        var obj = new Users
+                        {
+                            FirstName = user.FirstName,
+                            LastName = user.LastName,
+                            EmailID = user.EmailID,
+                            IsActive = true,
+                            ContactNo = user.ContactNo,
+                            Gender = user.Gender,
+                            Password = user.Password,
+                            CreatedDate = DateTime.Now,
+                            CreatedBy = 1,
+                        };
 
-                    context.Users.Add(obj);
-                    context.SaveChanges();
+                        context.Users.Add(obj);
+                        context.SaveChanges();
 
-                    return true;
-
+                        return true;
+                    }
+                    else
+                    {
+                        throw new Exception("User already exists with this email");
+                    }
                 }
-            }
+                }
             catch (Exception ex)
             {
 

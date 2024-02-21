@@ -7,7 +7,7 @@ namespace BlogAppAPI.Repository.Interface
         List<Model.UserBlogs> GetAllBlogs();
         List<Model.UserBlogs> GetBlogsById(int id);
         bool AddNewBlog(UserBlogs userBlogs);
-        bool DeleteBlog(int ID);
+        bool DeleteBlog(int ID,string emailID);
         bool AddComment(BlogComments blogComments);
 
         bool RegisterUser(Model.Users users);

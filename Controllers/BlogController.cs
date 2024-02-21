@@ -1,9 +1,12 @@
 ﻿using BlogAppAPI.DataAccess.Entity;
 using BlogAppAPI.Model;
 using BlogAppAPI.Repository.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Xml.Linq;
 
@@ -17,26 +20,26 @@ namespace BlogAppAPI.Controllers
         private readonly IUserBlogRepository _UserBlogService;
         public BlogController(IUserBlogRepository UserBlogService)
         {
-            _UserBlogService=UserBlogService;
+            _UserBlogService = UserBlogService;
         }
 
+        //[Authorize]
         [HttpGet("GetBlogs")]
         public ActionResult GetBlogs()
         {
 
-           var result=_UserBlogService.GetAllBlogs();
-
+            var result = _UserBlogService.GetAllBlogs();
 
             return Ok(result);
 
         }
 
+        [Authorize]
         [HttpGet("GetBlogsByID")]
         public ActionResult GetBlogsByID(int ID)
         {
-
+           
             var result = _UserBlogService.GetBlogsById(ID);
-
 
             return Ok(result);
 
@@ -52,11 +55,17 @@ namespace BlogAppAPI.Controllers
 
         }
 
+
+        [Authorize]
         [HttpGet("DeleteBlog")]
         public ActionResult DeleteBlog(int ID)
         {
+            var handler = new JwtSecurityTokenHandler();
+            string token = HttpContext.Request.Headers["Authorization"][0].Substring("Bearer ".Length);
+            var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
+            string emailID = jsonToken.Claims.Where(x => x.Type == "email").Select(x => x.Value).FirstOrDefault();
 
-            var result = _UserBlogService.DeleteBlog(ID);
+            var result = _UserBlogService.DeleteBlog(ID, emailID);
 
             return Ok(result);
 
@@ -83,6 +92,7 @@ namespace BlogAppAPI.Controllers
 
         }
 
+        [Authorize]
         [HttpPost("Login")]
         public ActionResult Login(Model.Users user)
         {
@@ -90,6 +100,14 @@ namespace BlogAppAPI.Controllers
             var result = _UserBlogService.Login(user);
 
             return Ok(result);
+
+        }
+
+        [HttpGet("TestAPI")]
+        public ActionResult TestAPI(int ID)
+        {
+
+            return Ok("Working!!");
 
         }
     }

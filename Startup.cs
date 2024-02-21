@@ -1,11 +1,19 @@
 ﻿using BlogAppAPI.Repository.Interface;
 using BlogAppAPI.Repository.Service;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Google.Apis.Auth.AspNetCore3;
+using Microsoft.AspNetCore.Authentication;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Runtime.ConstrainedExecution;
+
 
 namespace BlogAppAPI
 {
@@ -23,7 +31,7 @@ namespace BlogAppAPI
         {
             // Add DbContext to DI container
             services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(Configuration.GetConnectionString("Server=92RZXS3\\SQLEXPRESS;Database=BlogAppDB;Integrated Security=True;Encrypt=False;")));
+            options.UseSqlServer(Configuration.GetSection("ConnectionStrings").GetSection("DefaultConnection").Value));
 
             services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -46,6 +54,28 @@ namespace BlogAppAPI
                                .AllowAnyHeader();                    // Allow any header
                     });
             });
+
+            var firebaseOptions = new AppOptions
+            {
+                Credential = GoogleCredential.FromFile("adminsdk.json"),
+            };
+            FirebaseApp.Create(firebaseOptions);
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+               .AddJwtBearer(options =>
+               {
+                   options.Authority = "https://securetoken.google.com/blog-app-52b01";
+                   options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                   {
+                       ValidateIssuer = true,
+                       ValidIssuer = "https://securetoken.google.com/blog-app-52b01",
+                       ValidateAudience = true,
+                       ValidAudience = "blog-app-52b01",
+                       ValidateLifetime = true,
+                   };
+               });
+
+            services.AddAuthorization();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -53,9 +83,11 @@ namespace BlogAppAPI
         {
             if (env.IsDevelopment())
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                
             }
+
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             app.UseHttpsRedirection();
 
@@ -64,6 +96,8 @@ namespace BlogAppAPI
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
